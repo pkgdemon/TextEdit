@@ -50,7 +50,7 @@
 #import <Cocoa/Cocoa.h>
 #import "ScalingScrollView.h"
 
-@interface DocumentWindowController : NSWindowController <NSLayoutManagerDelegate, NSTextViewDelegate> {
+@interface DocumentWindowController : NSWindowController <NSTextViewDelegate> {
     IBOutlet ScalingScrollView *scrollView;
     NSLayoutManager *layoutMgr;
     BOOL hasMultiplePages;

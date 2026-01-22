@@ -51,7 +51,9 @@
 
 @class NSPopUpButton;
 
-@interface ScalingScrollView : NSScrollView
+@interface ScalingScrollView : NSScrollView {
+    CGFloat _scaleFactor;
+}
 
 - (void)setScaleFactor:(CGFloat)factor adjustPopup:(BOOL)flag;
 - (CGFloat)scaleFactor;

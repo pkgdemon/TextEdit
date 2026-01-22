@@ -84,11 +84,12 @@
     [super dealloc];
 }
 
-/* Create a new document of the default type and initialize its contents from the pasteboard. 
+/* Create a new document of the default type and initialize its contents from the pasteboard.
 */
 - (Document *)openDocumentWithContentsOfPasteboard:(NSPasteboard *)pb display:(BOOL)display error:(NSError **)error {
-    // Read type and attributed string.
-    NSString *pasteboardType = [pb availableTypeFromArray:[NSAttributedString readableTypesForPasteboard:pb]];
+    // Read type and attributed string using common pasteboard types
+    NSArray *readableTypes = [NSArray arrayWithObjects:NSPasteboardTypeRTFD, NSPasteboardTypeRTF, NSPasteboardTypeString, nil];
+    NSString *pasteboardType = [pb availableTypeFromArray:readableTypes];
     NSData *data = [pb dataForType:pasteboardType];
     NSAttributedString *string = nil;
     NSString *type = nil;
@@ -100,11 +101,11 @@
         // We only expect to see plain-text, RTF, and RTFD at this point.
         NSString *docType = [attributes objectForKey:NSDocumentTypeDocumentAttribute];
         if ([docType isEqualToString:NSPlainTextDocumentType]) {
-            type = (NSString *)kUTTypeText;
+            type = @"public.text";
         } else if ([docType isEqualToString:NSRTFTextDocumentType]) {
-            type = (NSString *)kUTTypeRTF;
+            type = @"public.rtf";
         } else if ([docType isEqualToString:NSRTFDTextDocumentType]) {
-            type = (NSString *)kUTTypeRTFD;
+            type = @"com.apple.rtfd";
         }
     }
     
@@ -127,7 +128,7 @@
             
             NSTextStorage *text = [doc textStorage];
             [text replaceCharactersInRange:NSMakeRange(0, [text length]) withAttributedString:string];
-            if ([type isEqualToString:(NSString *)kUTTypeText]) [doc applyDefaultTextAttributes:NO];
+            if ([type isEqualToString:@"public.text"]) [doc applyDefaultTextAttributes:NO];
             
             [self addDocument:doc];
             [doc updateChangeCount:NSChangeReadOtherContents];
@@ -148,24 +149,18 @@
     return nil;
 }
 
-/* This method is overridden in order to support transient documents, i.e. the automatic closing of an automatically created untitled document, when a real document is opened. 
+/* This method is overridden in order to support transient documents, i.e. the automatic closing of an automatically created untitled document, when a real document is opened.
 */
 - (id)openUntitledDocumentAndDisplay:(BOOL)displayDocument error:(NSError **)outError {
     Document *doc = [super openUntitledDocumentAndDisplay:displayDocument error:outError];
-    
+
     if (!doc) return nil;
-    
+
     if ([[self documents] count] == 1) {
-        // Determine whether this document might be a transient one
-        // Check if there is a current AppleEvent. If there is, check whether it is an open or reopen event. In that case, the document being created is transient.
-        NSAppleEventDescriptor *evtDesc = [[NSAppleEventManager sharedAppleEventManager] currentAppleEvent];
-        AEEventID evtID = [evtDesc eventID];
-        
-        if (evtDesc && (evtID == kAEReopenApplication || evtID == kAEOpenApplication) && [evtDesc eventClass] == kCoreEventClass) {
-            [doc setTransient:YES];
-        }
+        // Simplified: mark first auto-created document as transient
+        [doc setTransient:YES];
     }
-    
+
     return doc;
 }
 
@@ -350,7 +345,7 @@
    -defaultType to return the appropriate type string. 
 */
 - (NSString *)defaultType {
-    return (NSString *)([[NSUserDefaults standardUserDefaults] boolForKey:RichText] ? kUTTypeRTF : kUTTypeText);
+    return [[NSUserDefaults standardUserDefaults] boolForKey:RichText] ? @"public.rtf" : @"public.text";
 }
 
 @end

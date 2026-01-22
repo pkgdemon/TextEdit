@@ -78,7 +78,7 @@ static NSDictionary *defaultValues() {
 		[NSNumber numberWithBool:NO], IgnoreHTML,
                 [NSNumber numberWithBool:YES], CheckSpellingAsYouType,
                 [NSNumber numberWithBool:NO], CheckGrammarWithSpelling,
-                [NSNumber numberWithBool:[NSSpellChecker isAutomaticSpellingCorrectionEnabled]], CorrectSpellingAutomatically,
+                [NSNumber numberWithBool:NO], CorrectSpellingAutomatically,
                 [NSNumber numberWithBool:YES], ShowRuler,
                 [NSNumber numberWithBool:YES], SmartCopyPaste,
                 [NSNumber numberWithBool:NO], SmartQuotes,
@@ -129,7 +129,7 @@ static NSDictionary *defaultValues() {
     NSString *filename, *origFilename;
     NSURL *url = nil;
     NSError *err = nil;
-    NSString *type = [pboard availableTypeFromArray:[NSArray arrayWithObject:(NSString *)kUTTypePlainText]];
+    NSString *type = [pboard availableTypeFromArray:[NSArray arrayWithObject:NSPasteboardTypeString]];
 
     if (type && (filename = origFilename = [pboard stringForType:type])) {
         BOOL success = NO;

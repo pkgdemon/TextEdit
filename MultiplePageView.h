@@ -49,12 +49,20 @@
 
 #import <Cocoa/Cocoa.h>
 
+// Define NSTextLayoutOrientation if not available (GNUstep compatibility)
+#ifndef NSTextLayoutOrientationHorizontal
+typedef NS_ENUM(NSInteger, NSTextLayoutOrientation) {
+    NSTextLayoutOrientationHorizontal = 0,
+    NSTextLayoutOrientationVertical = 1
+};
+#endif
+
 @interface MultiplePageView : NSView {
     NSPrintInfo *printInfo;
     NSColor *lineColor;
     NSColor *marginColor;
     NSUInteger numPages;
-    NSTextLayoutOrientation layoutOrientation;
+    NSInteger layoutOrientation;
 }
 
 - (void)setPrintInfo:(NSPrintInfo *)anObject;
@@ -69,7 +77,7 @@
 - (NSColor *)lineColor;
 - (void)setMarginColor:(NSColor *)color;
 - (NSColor *)marginColor;
-- (void)setLayoutOrientation:(NSTextLayoutOrientation)orientation;
-- (NSTextLayoutOrientation)layoutOrientation;
+- (void)setLayoutOrientation:(NSInteger)orientation;
+- (NSInteger)layoutOrientation;
 
 @end

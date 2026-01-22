@@ -120,40 +120,42 @@ static EncodingManager *sharedInstance = nil;
 
 
 
-/* Sort using the equivalent Mac encoding as the major key. Secondary key is the actual encoding value, which works well enough. We treat Unicode encodings as special case, putting them at top of the list.
+/* Sort encodings by their localized names
 */
-static int encodingCompare(const void *firstPtr, const void *secondPtr) {
-    CFStringEncoding first = *(CFStringEncoding *)firstPtr;
-    CFStringEncoding second = *(CFStringEncoding *)secondPtr;
-    CFStringEncoding macEncodingForFirst = CFStringGetMostCompatibleMacStringEncoding(first);
-    CFStringEncoding macEncodingForSecond = CFStringGetMostCompatibleMacStringEncoding(second);
-    if (first == second) return 0;	// Should really never happen
-    if (macEncodingForFirst == kCFStringEncodingUnicode || macEncodingForSecond == kCFStringEncodingUnicode) {
-        if (macEncodingForSecond == macEncodingForFirst) return (first > second) ? 1 : -1;	// Both Unicode; compare second order
-        return (macEncodingForFirst == kCFStringEncodingUnicode) ? -1 : 1;	// First is Unicode
+static NSInteger encodingCompare(id first, id second, void *context) {
+    NSStringEncoding enc1 = [first unsignedIntegerValue];
+    NSStringEncoding enc2 = [second unsignedIntegerValue];
+    // Put Unicode encodings at the top
+    if (enc1 == NSUnicodeStringEncoding || enc1 == NSUTF8StringEncoding) {
+        if (enc2 != NSUnicodeStringEncoding && enc2 != NSUTF8StringEncoding) return NSOrderedAscending;
     }
-    if ((macEncodingForFirst > macEncodingForSecond) || ((macEncodingForFirst == macEncodingForSecond) && (first > second))) return 1;
-    return -1;
+    if (enc2 == NSUnicodeStringEncoding || enc2 == NSUTF8StringEncoding) {
+        if (enc1 != NSUnicodeStringEncoding && enc1 != NSUTF8StringEncoding) return NSOrderedDescending;
+    }
+    // Otherwise sort by localized name
+    NSString *name1 = [NSString localizedNameOfStringEncoding:enc1];
+    NSString *name2 = [NSString localizedNameOfStringEncoding:enc2];
+    return [name1 compare:name2];
 }
 
 /* Return a sorted list of all available string encodings.
 */
 + (NSArray *)allAvailableStringEncodings {
     static NSMutableArray *allEncodings = nil;
-    if (!allEncodings) {	// Build list of encodings, sorted, and including only those with human readable names
-        const CFStringEncoding *cfEncodings = CFStringGetListOfAvailableEncodings();
-        CFStringEncoding *tmp;
-        NSInteger cnt, num = 0;
-        while (cfEncodings[num] != kCFStringEncodingInvalidId) num++;	// Count
-        tmp = malloc(sizeof(CFStringEncoding) * num);
-        memcpy(tmp, cfEncodings, sizeof(CFStringEncoding) * num);	// Copy the list
-        qsort(tmp, num, sizeof(CFStringEncoding), encodingCompare);	// Sort it
-        allEncodings = [[NSMutableArray alloc] init];			// Now put it in an NSArray
-        for (cnt = 0; cnt < num; cnt++) {
-            NSStringEncoding nsEncoding = CFStringConvertEncodingToNSStringEncoding(tmp[cnt]);
-            if (nsEncoding && [NSString localizedNameOfStringEncoding:nsEncoding]) [allEncodings addObject:[NSNumber numberWithUnsignedInteger:nsEncoding]];
+    if (!allEncodings) {
+        // Build list of common encodings available in GNUstep
+        const NSStringEncoding *nsEncodings = [NSString availableStringEncodings];
+        allEncodings = [[NSMutableArray alloc] init];
+        while (*nsEncodings != 0) {
+            NSStringEncoding encoding = *nsEncodings;
+            NSString *name = [NSString localizedNameOfStringEncoding:encoding];
+            if (name && [name length] > 0) {
+                [allEncodings addObject:[NSNumber numberWithUnsignedInteger:encoding]];
+            }
+            nsEncodings++;
         }
-        free(tmp);
+        // Sort the list
+        [allEncodings sortUsingFunction:encodingCompare context:NULL];
     }
     return allEncodings;
 }
@@ -226,22 +228,22 @@ static int encodingCompare(const void *firstPtr, const void *secondPtr) {
 /* Returns the actual enabled list of encodings.
 */
 - (NSArray *)enabledEncodings {
-    static const NSInteger plainTextFileStringEncodingsSupported[] = {
-        kCFStringEncodingUnicode, kCFStringEncodingUTF8, kCFStringEncodingMacRoman, kCFStringEncodingWindowsLatin1, kCFStringEncodingMacJapanese, kCFStringEncodingShiftJIS, kCFStringEncodingMacChineseTrad, kCFStringEncodingMacKorean, kCFStringEncodingMacChineseSimp, kCFStringEncodingGB_18030_2000, -1
+    // Common encodings to enable by default
+    static const NSStringEncoding plainTextFileStringEncodingsSupported[] = {
+        NSUnicodeStringEncoding, NSUTF8StringEncoding, NSMacOSRomanStringEncoding, NSWindowsCP1252StringEncoding,
+        NSJapaneseEUCStringEncoding, NSShiftJISStringEncoding, NSISOLatin1StringEncoding, NSASCIIStringEncoding, 0
     };
     if (encodings == nil) {
         NSMutableArray *encs = [[[NSUserDefaults standardUserDefaults] arrayForKey:@"Encodings"] mutableCopy];
         if (encs == nil) {
             NSStringEncoding defaultEncoding = [NSString defaultCStringEncoding];
-            NSStringEncoding encoding;
             BOOL hasDefault = NO;
             NSInteger cnt = 0;
             encs = [[NSMutableArray alloc] init];
-            while (plainTextFileStringEncodingsSupported[cnt] != -1) {
-                if ((encoding = CFStringConvertEncodingToNSStringEncoding(plainTextFileStringEncodingsSupported[cnt++])) != kCFStringEncodingInvalidId) {
-                    [encs addObject:[NSNumber numberWithUnsignedInteger:encoding]];
-                    if (encoding == defaultEncoding) hasDefault = YES;
-                }
+            while (plainTextFileStringEncodingsSupported[cnt] != 0) {
+                NSStringEncoding encoding = plainTextFileStringEncodingsSupported[cnt++];
+                [encs addObject:[NSNumber numberWithUnsignedInteger:encoding]];
+                if (encoding == defaultEncoding) hasDefault = YES;
             }
             if (!hasDefault) [encs addObject:[NSNumber numberWithUnsignedInteger:defaultEncoding]];
         }

@@ -192,7 +192,7 @@
     return marginColor;
 }
 
-- (void)setLayoutOrientation:(NSTextLayoutOrientation)orientation {
+- (void)setLayoutOrientation:(NSInteger)orientation {
     if (orientation != layoutOrientation) {
         layoutOrientation = orientation;
 
@@ -200,7 +200,7 @@
     }
 }
 
-- (NSTextLayoutOrientation)layoutOrientation {
+- (NSInteger)layoutOrientation {
     return layoutOrientation;
 }
 
