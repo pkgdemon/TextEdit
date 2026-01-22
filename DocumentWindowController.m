@@ -94,9 +94,9 @@
 
 - (id)init {
     if (self = [super initWithWindowNibName:@"DocumentWindow"]) {
-	layoutMgr = [[NSLayoutManager allocWithZone:[self zone]] init];
-	[layoutMgr setDelegate:self];
-	[layoutMgr setAllowsNonContiguousLayout:YES];
+        layoutMgr = [[NSLayoutManager allocWithZone:[self zone]] init];
+        [layoutMgr setDelegate:self];
+        [layoutMgr setAllowsNonContiguousLayout:YES];
     }
     return self;
 }
@@ -125,7 +125,7 @@
 */
 - (void)setDocument:(Document *)doc {
     Document *oldDoc = [[self document] retain];
-    
+
     if (oldDoc) {
         [layoutMgr unbind:@"hyphenationFactor"];
         [[self firstTextView] unbind:@"editable"];
@@ -133,21 +133,26 @@
     [super setDocument:doc];
     if (doc) {
         [layoutMgr bind:@"hyphenationFactor" toObject:self withKeyPath:@"document.hyphenationFactor" options:nil];
-        [[self firstTextView] bind:@"editable" toObject:self withKeyPath:@"document.readOnly" options:[NSDictionary dictionaryWithObject:NSNegateBooleanTransformerName forKey:NSValueTransformerNameBindingOption]];
+        NSTextView *ftv = [self firstTextView];
+        if (ftv) {
+            [ftv bind:@"editable" toObject:self withKeyPath:@"document.readOnly" options:[NSDictionary dictionaryWithObject:NSNegateBooleanTransformerName forKey:NSValueTransformerNameBindingOption]];
+        }
     }
     if (oldDoc != doc) {
-	if (oldDoc) {
+        if (oldDoc) {
             /* Remove layout manager from the old Document's text storage. No need to retain as we already own the object. */
-	    [[oldDoc textStorage] removeLayoutManager:layoutMgr];
-	    
-	    [oldDoc removeObserver:self forKeyPath:@"printInfo"];
-	    [oldDoc removeObserver:self forKeyPath:@"richText"];
-	    [oldDoc removeObserver:self forKeyPath:@"viewSize"];
-	    [oldDoc removeObserver:self forKeyPath:@"hasMultiplePages"];
-	}
-	
-	if (doc) {
-            [[doc textStorage] addLayoutManager:layoutMgr];
+            [[oldDoc textStorage] removeLayoutManager:layoutMgr];
+
+            [oldDoc removeObserver:self forKeyPath:@"printInfo"];
+            [oldDoc removeObserver:self forKeyPath:@"richText"];
+            [oldDoc removeObserver:self forKeyPath:@"viewSize"];
+            [oldDoc removeObserver:self forKeyPath:@"hasMultiplePages"];
+        }
+
+        if (doc) {
+            if (layoutMgr && [doc textStorage]) {
+                [[doc textStorage] addLayoutManager:layoutMgr];
+            }
 	    
 	    if ([self isWindowLoaded]) {
                 [self setHasMultiplePages:[doc hasMultiplePages] force:NO];
@@ -475,13 +480,17 @@
 - (void)setHasMultiplePages:(BOOL)pages force:(BOOL)force {
     NSInteger orientation = NSTextLayoutOrientationHorizontal;
     NSZone *zone = [self zone];
-    
+
     if (!force && (hasMultiplePages == pages)) return;
-    
+
     hasMultiplePages = pages;
-    
-    [[self firstTextView] removeObserver:self forKeyPath:@"backgroundColor"];
-    [[self firstTextView] unbind:@"editable"];
+
+    // Only remove observer if firstTextView exists (not on first call)
+    NSTextView *existingTextView = [self firstTextView];
+    if (existingTextView) {
+        [existingTextView removeObserver:self forKeyPath:@"backgroundColor"];
+        [existingTextView unbind:@"editable"];
+    }
 
     // Simplified: always use horizontal orientation for GNUstep
 
@@ -621,8 +630,13 @@
     
     // Changes to the zoom popup need to be communicated to the document
     if ([[self document] hasMultiplePages]) [scrollView setScaleFactor:[[self document] scaleFactor] adjustPopup:YES];
-    [scrollView addObserver:self forKeyPath:@"scaleFactor" options:0 context:NULL];
-    [[scrollView verticalScroller] addObserver:self forKeyPath:@"scrollerStyle" options:0 context:NULL];
+    if (scrollView) {
+        [scrollView addObserver:self forKeyPath:@"scaleFactor" options:0 context:NULL];
+        NSScroller *vertScroller = [scrollView verticalScroller];
+        if (vertScroller) {
+            [vertScroller addObserver:self forKeyPath:@"scrollerStyle" options:0 context:NULL];
+        }
+    }
     [[[self document] undoManager] removeAllActions];
 }
 

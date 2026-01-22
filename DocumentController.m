@@ -70,14 +70,19 @@
 @implementation DocumentController
 
 - (void)awakeFromNib {
-    [self bind:@"autosavingDelay" toObject:[NSUserDefaultsController sharedUserDefaultsController] withKeyPath:@"values." AutosavingDelay options:nil];
+    // Only bind autosavingDelay if the property exists (macOS 10.7+, not available in GNUstep)
+    if ([self respondsToSelector:@selector(setAutosavingDelay:)]) {
+        [self bind:@"autosavingDelay" toObject:[NSUserDefaultsController sharedUserDefaultsController] withKeyPath:@"values." AutosavingDelay options:nil];
+    }
     customOpenSettings = [[NSMutableDictionary alloc] init];
     transientDocumentLock = [[NSLock alloc] init];
     displayDocumentLock = [[NSLock alloc] init];
 }
 
 - (void)dealloc {
-    [self unbind:@"autosavingDelay"];
+    if ([self respondsToSelector:@selector(setAutosavingDelay:)]) {
+        [self unbind:@"autosavingDelay"];
+    }
     [customOpenSettings release];
     [transientDocumentLock release];
     [displayDocumentLock release];
@@ -147,6 +152,23 @@
             nil]];
 
     return nil;
+}
+
+/* Override makeUntitledDocumentOfType:error: to ensure documents are created properly.
+   GNUstep's default implementation may have issues with UTI-based document types
+   since it expects the older CFBundleTypeExtensions format.
+*/
+- (id)makeUntitledDocumentOfType:(NSString *)typeName error:(NSError **)outError {
+    Class documentClass = [self documentClassForType:typeName];
+
+    // GNUstep may not find the document class via UTI, so fall back to Document class
+    if (!documentClass) {
+        documentClass = [Document class];
+    }
+
+    Document *doc = [[[documentClass alloc] initWithType:typeName error:outError] autorelease];
+
+    return doc;
 }
 
 /* This method is overridden in order to support transient documents, i.e. the automatic closing of an automatically created untitled document, when a real document is opened.

@@ -85,7 +85,7 @@ static NSDictionary *defaultValues() {
                 [NSNumber numberWithBool:NO], SmartDashes,
                 [NSNumber numberWithBool:NO], SmartLinks,
                 [NSNumber numberWithBool:NO], DataDetectors,
-                [NSNumber numberWithBool:[NSSpellChecker isAutomaticTextReplacementEnabled]], TextReplacement,
+                [NSNumber numberWithBool:([NSSpellChecker respondsToSelector:@selector(isAutomaticTextReplacementEnabled)] ? [NSSpellChecker isAutomaticTextReplacementEnabled] : NO)], TextReplacement,
                 [NSNumber numberWithBool:NO], SubstitutionsEnabledInRichTextOnly,
                 @"", AuthorProperty,
                 @"", CompanyProperty,

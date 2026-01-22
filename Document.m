@@ -96,16 +96,16 @@ NSString *OpenDocumentTextType = @"org.oasis-open.opendocument.text";
 - (id)init {
     if ((self = [super init])) {
         [[self undoManager] disableUndoRegistration];
-    
+
 	textStorage = [[NSTextStorage allocWithZone:[self zone]] init];
-	
+
 	[self setBackgroundColor:[NSColor whiteColor]];
 	[self setEncoding:NoStringEncoding];
 	[self setEncodingForSaving:NoStringEncoding];
 	[self setScaleFactor:1.0];
 	[self setDocumentPropertiesToDefaults];
 	inDuplicate = NO;
-        
+
 	// Assume the default file type for now, since -initWithType:error: does not currently get called when creating documents using AppleScript. (4165700)
 	[self setFileType:[[NSDocumentController sharedDocumentController] defaultType]];
 
@@ -116,6 +116,34 @@ NSString *OpenDocumentTextType = @"org.oasis-open.opendocument.text";
 	[self setUsesScreenFonts:[self isRichText] ? [[NSUserDefaults standardUserDefaults] boolForKey:UseScreenFonts] : YES];
 
 	[[self undoManager] enableUndoRegistration];
+    }
+    return self;
+}
+
+/* Override initWithType:error: to ensure our init is called properly.
+   GNUstep's NSDocument may not chain through -init, so we need to handle both paths.
+*/
+- (id)initWithType:(NSString *)typeName error:(NSError **)outError {
+    // First call super's initWithType:error: which should eventually call our init
+    self = [super initWithType:typeName error:outError];
+    if (self) {
+        // Ensure textStorage is initialized (in case super didn't call init)
+        if (!textStorage) {
+            [[self undoManager] disableUndoRegistration];
+            textStorage = [[NSTextStorage allocWithZone:[self zone]] init];
+            [self setBackgroundColor:[NSColor whiteColor]];
+            [self setEncoding:NoStringEncoding];
+            [self setEncodingForSaving:NoStringEncoding];
+            [self setScaleFactor:1.0];
+            [self setDocumentPropertiesToDefaults];
+            inDuplicate = NO;
+            [self setPrintInfo:[self printInfo]];
+            hasMultiplePages = [[NSUserDefaults standardUserDefaults] boolForKey:ShowPageBreaks];
+            [self setUsesScreenFonts:[self isRichText] ? [[NSUserDefaults standardUserDefaults] boolForKey:UseScreenFonts] : YES];
+            [[self undoManager] enableUndoRegistration];
+        }
+        // Set the file type to what was requested
+        [self setFileType:typeName];
     }
     return self;
 }
