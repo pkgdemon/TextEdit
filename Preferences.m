@@ -66,8 +66,10 @@
     NSWindow *window = [self window];
     [window setHidesOnDeactivate:NO];
     [window setExcludedFromWindowsMenu:YES];
+#if defined(__APPLE__) && !defined(GNUSTEP)
     [window setIdentifier:@"Preferences"];
     [window setRestorationClass:[self class]];
+#endif
 }
 
 /* Reopen the preferences window when the app's persistent state is restored. 

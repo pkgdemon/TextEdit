@@ -1019,6 +1019,7 @@ In addition we overwrite this method as a way to tell that the document has been
                 // duplicate button - index 0 for lossy document errors and index 2 otherwise
                 if (((errorCode == TextEditSaveErrorLossyDocument) && (recoveryOptionIndex == 0)) ||
                     ((errorCode != TextEditSaveErrorLossyDocument) && (recoveryOptionIndex == 2))) {
+#if defined(__APPLE__) && !defined(GNUSTEP)
                     NSError *duplicateError;
                     NSDocument *duplicateDocument;
                     duplicateDocument = [self duplicateAndReturnError:&duplicateError];
@@ -1039,7 +1040,12 @@ In addition we overwrite this method as a way to tell that the document has been
                             [self presentError:duplicateError];
                         }
                     }
-                // save / overwrite button - index 2 for lossy document errors and 0 otherwise 
+#else
+                    // GNUstep doesn't support -duplicateAndReturnError:
+                    // Just inform the user that duplicating is not supported
+                    NSBeep();
+#endif
+                // save / overwrite button - index 2 for lossy document errors and 0 otherwise
                 } else if (((errorCode == TextEditSaveErrorLossyDocument) && (recoveryOptionIndex == 2)) ||
                     ((errorCode != TextEditSaveErrorLossyDocument) && (recoveryOptionIndex == 0))) {
                     if (![[self writableTypesForSaveOperation:NSSaveAsOperation] containsObject:[self fileType]])

@@ -108,9 +108,11 @@
     [self activeDocumentChanged];
     [NSApp addObserver:self forKeyPath:@"mainWindow.windowController.document" options:0 context:[DocumentPropertiesPanelController class]];
 
+#if defined(__APPLE__) && !defined(GNUSTEP)
     NSWindow *window = [self window];
     [window setIdentifier:@"DocumentProperties"];
     [window setRestorationClass:[self class]];
+#endif
 
     [super windowDidLoad];  // It's documented to do nothing, but still a good idea to invoke...
 }

@@ -60,9 +60,11 @@
 }
 
 - (void)windowDidLoad {
+#if defined(__APPLE__) && !defined(GNUSTEP)
     NSWindow *window = [self window];
     [window setIdentifier:@"Line"];
     [window setRestorationClass:[self class]];
+#endif
     [super windowDidLoad];  // It's documented to do nothing, but still a good idea to invoke...
 }
 

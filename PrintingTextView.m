@@ -70,7 +70,9 @@
         
         NSSize size = wrappingToFit ? documentSizeInPage : self.originalSize;
         [self setFrame:NSMakeRect(0.0, 0.0, size.width, size.height)];
+#if defined(__APPLE__) && !defined(GNUSTEP)
         [[[self textContainer] layoutManager] setDefaultAttachmentScaling:wrappingToFit ? NSImageScaleProportionallyDown : NSImageScaleNone];
+#endif
         [self textEditDoForegroundLayoutToCharacterIndex:NSIntegerMax];		// Make sure the whole document is laid out
     }
     return [super knowsPageRange:range];
